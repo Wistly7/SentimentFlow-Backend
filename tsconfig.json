@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    /* Base Options */
+    "target": "es2016",
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+
+    /* Strictness */
+    "strict": false,
+
+    /* Project Structure */
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "noImplicitAny": false,
+    /* Debugging */
+    "sourceMap": true
+  },
+  "include": ["./src/**/*"], // Tell TS to only look inside the src folder
+  "exclude": ["node_modules"]
+}

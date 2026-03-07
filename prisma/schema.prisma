@@ -1,0 +1,61 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["typedSql"]
+  binaryTargets   = ["native", "debian-openssl-1.1.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       String @id @default(uuid())
+  name     String
+  email    String @unique
+  password String
+  roleId   Int    @default(1)
+}
+
+model Articles {
+  id                String              @id @default(uuid())
+  title             String
+  content           String              @db.VarChar
+  publishedAt       DateTime
+  url               String?             @unique(map: "articles_url_unique")
+  createdAt         DateTime            @default(now())
+  ArticlesSentiment ArticlesSentiment[]
+}
+
+model Startups {
+  id                String              @id @default(uuid())
+  name              String
+  findingKeywords   String?
+  description       String?
+  createdAt         DateTime            @default(now())
+  imageUrl          String?
+  sectorId          Int
+  ArticlesSentiment ArticlesSentiment[]
+  sector            Sector              @relation("Company Sectors", fields: [sectorId], references: [id])
+}
+
+model Sector {
+  id              Int        @id @default(autoincrement())
+  name            String
+  companiesLinked Startups[] @relation("Company Sectors")
+}
+
+model ArticlesSentiment {
+  id            String   @id
+  articleId     String
+  startupId     String
+  createdAt     DateTime @default(now())
+  sentiment     String?
+  negativeScore Float?
+  neutralScore  Float?
+  positiveScore Float?
+  Articles      Articles @relation(fields: [articleId], references: [id])
+  Startups      Startups @relation(fields: [startupId], references: [id])
+
+  @@unique([articleId, startupId])
+}
