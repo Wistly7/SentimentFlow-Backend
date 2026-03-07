@@ -187,6 +187,9 @@ const getPaginatedNews = (req, res) => __awaiter(void 0, void 0, void 0, functio
             },
             omit: {
                 createdAt: true,
+            },
+            orderBy: {
+                publishedAt: 'desc',
             }
         });
         const totalNewsItems = yield prisma_1.prisma.articles.count({

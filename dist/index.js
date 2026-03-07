@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
+const cors_1 = __importDefault(require("cors"));
 const authRoute_1 = __importDefault(require("./routes/authRoute"));
 const httpLogger_1 = require("./middlewares/httpLogger");
 const dashboardRoutes_1 = __importDefault(require("./routes/dashboardRoutes"));
@@ -13,6 +14,10 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const uploader_1 = __importDefault(require("./routes/uploader"));
 const app = (0, express_1.default)();
 dotenv_1.default.config();
+app.use((0, cors_1.default)({
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    credentials: true,
+}));
 app.use(httpLogger_1.httpLogger);
 app.use(express_1.default.urlencoded({ extended: true }));
 app.use(express_1.default.json());

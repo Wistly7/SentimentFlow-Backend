@@ -34,6 +34,27 @@ FROM "ArticlesSentiment";`;
             neutralCount: Number(articles.Neutral),
             totalCount: Number(articles.totalArticles),
         }))[0];
+        //count startups by their current average sentiment
+        const startupSentimentCounts = yield prisma_1.prisma.$queryRaw `
+      SELECT
+        COUNT(*) FILTER (WHERE avg_score > 0) AS "positiveStartups",
+        COUNT(*) FILTER (WHERE avg_score < 0) AS "negativeStartups",
+        COUNT(*) FILTER (WHERE avg_score = 0) AS "neutralStartups"
+      FROM (
+        SELECT
+          s.id,
+          COALESCE(AVG(als."positiveScore" - als."negativeScore"), 0) AS avg_score
+        FROM "Startups" s
+        LEFT JOIN "ArticlesSentiment" als ON s.id = als."startupId"
+        GROUP BY s.id
+      ) AS startup_avg;
+    `;
+        const startupSentimentGrouping = {
+            positiveCount: Number(startupSentimentCounts[0].positiveStartups),
+            negativeCount: Number(startupSentimentCounts[0].negativeStartups),
+            neutralCount: Number(startupSentimentCounts[0].neutralStartups),
+            totalCount: totalStartups,
+        };
         //compare total startup count to last month
         const monthCompare = yield prisma_1.prisma.$queryRaw `
     SELECT
@@ -71,6 +92,7 @@ FROM "ArticlesSentiment";`;
             statsResult: {
                 totalStartups,
                 statusGrouping,
+                startupSentimentGrouping,
                 startUpAnalytics: monthIncDecStats,
                 positiveTrendArticles,
                 negativeTrendArticles,

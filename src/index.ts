@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import authRouter from "./routes/authRoute";
 import { httpLogger } from "./middlewares/httpLogger";
 import dashboardRouter from "./routes/dashboardRoutes";
@@ -9,6 +10,10 @@ import fetcherRouter from "./routes/uploader";
 const app = express();
 
 dotenv.config();
+app.use(cors({
+  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  credentials: true,
+}));
 app.use(httpLogger);
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());

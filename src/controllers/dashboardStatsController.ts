@@ -1,12 +1,12 @@
 import { Request, Response } from "express";
 import { prisma } from "../config/prisma";
 import logger from "../lib/logger";
-export const dashBoardAnalytics = async (req: Request, res: Response):Promise<void> => {
+export const dashBoardAnalytics = async (req: Request, res: Response): Promise<void> => {
   try {
-      //get startup count
-    const totalStartups:number = await prisma.startups.count();
+    //get startup count
+    const totalStartups: number = await prisma.startups.count();
     //get articles count based on sentiment
-    const totalArticles  = await prisma.$queryRaw<{
+    const totalArticles = await prisma.$queryRaw<{
       Positive: bigint;
       Negative: bigint;
       Neutral: bigint;
@@ -18,10 +18,10 @@ export const dashBoardAnalytics = async (req: Request, res: Response):Promise<vo
   count(*) as "totalArticles"
 FROM "ArticlesSentiment";`;
     //group the stats data together
-    const statusGrouping:{
+    const statusGrouping: {
       postiveCount: number;
       negativeCount: number;
-      neutralCount:number;
+      neutralCount: number;
       totalCount: number;
     } = totalArticles.map((articles) => ({
       postiveCount: Number(articles.Positive),
@@ -29,8 +29,35 @@ FROM "ArticlesSentiment";`;
       neutralCount: Number(articles.Neutral),
       totalCount: Number(articles.totalArticles),
     }))[0];
+
+    //count startups by their current average sentiment
+    const startupSentimentCounts = await prisma.$queryRaw<{
+      positiveStartups: bigint;
+      negativeStartups: bigint;
+      neutralStartups: bigint;
+    }[]>`
+      SELECT
+        COUNT(*) FILTER (WHERE avg_score > 0) AS "positiveStartups",
+        COUNT(*) FILTER (WHERE avg_score < 0) AS "negativeStartups",
+        COUNT(*) FILTER (WHERE avg_score = 0) AS "neutralStartups"
+      FROM (
+        SELECT
+          s.id,
+          COALESCE(AVG(als."positiveScore" - als."negativeScore"), 0) AS avg_score
+        FROM "Startups" s
+        LEFT JOIN "ArticlesSentiment" als ON s.id = als."startupId"
+        GROUP BY s.id
+      ) AS startup_avg;
+    `;
+    const startupSentimentGrouping = {
+      positiveCount: Number(startupSentimentCounts[0].positiveStartups),
+      negativeCount: Number(startupSentimentCounts[0].negativeStartups),
+      neutralCount: Number(startupSentimentCounts[0].neutralStartups),
+      totalCount: totalStartups,
+    };
+
     //compare total startup count to last month
-    const monthCompare  = await prisma.$queryRaw<{
+    const monthCompare = await prisma.$queryRaw<{
       currentMonthCount: bigint;
       previousMonthCount: bigint;
     }[]>`
@@ -40,7 +67,7 @@ FROM "ArticlesSentiment";`;
     FROM "Startups";
     `;
 
-    const monthIncDecStats:number =
+    const monthIncDecStats: number =
       Number(monthCompare[0].currentMonthCount) -
       Number(monthCompare[0].previousMonthCount);
 
@@ -61,25 +88,26 @@ FROM "ArticlesSentiment";`;
       FROM "Articles" as a inner join "ArticlesSentiment" as als
       ON a.id = als."articleId"
     `;
-    const positiveTrendArticles:number =
+    const positiveTrendArticles: number =
       ((Number(articlesWeeklyStats[0].currentWeekPositive) -
         Number(articlesWeeklyStats[0].previousWeekPositive)) *
         100) /
       (Number(articlesWeeklyStats[0].previousWeekPositive) === 0
         ? 1
         : Number(articlesWeeklyStats[0].previousWeekPositive));
-    const negativeTrendArticles:number =
+    const negativeTrendArticles: number =
       ((Number(articlesWeeklyStats[0].currentWeekNegative) -
         Number(articlesWeeklyStats[0].previousWeekNegative)) *
         100) /
       (Number(articlesWeeklyStats[0].previousWeekNegative) === 0
         ? 1
         : Number(articlesWeeklyStats[0].previousWeekNegative));
-    const neutralTrendArticles:number = Number(articlesWeeklyStats[0].avg_sentiment);
+    const neutralTrendArticles: number = Number(articlesWeeklyStats[0].avg_sentiment);
     res.status(200).json({
       statsResult: {
         totalStartups,
         statusGrouping,
+        startupSentimentGrouping,
         startUpAnalytics: monthIncDecStats,
         positiveTrendArticles,
         negativeTrendArticles,
@@ -96,10 +124,10 @@ FROM "ArticlesSentiment";`;
       .json({ error: "This was a server error in fetching stats" });
   }
 };
-export const TrendingStartups = async (req: Request, res: Response):Promise<void> => {
+export const TrendingStartups = async (req: Request, res: Response): Promise<void> => {
   //get 4 startups with more articles in the present week
   try {
-    const trendingStartups  = await prisma.$queryRawUnsafe<{id:string;name:string;current_week_article_count:bigint; overall_avg_sentiment:number}[]>(`
+    const trendingStartups = await prisma.$queryRawUnsafe<{ id: string; name: string; current_week_article_count: bigint; overall_avg_sentiment: number }[]>(`
       WITH StartupStats AS (
         SELECT
           s.id,
@@ -144,7 +172,7 @@ export const TrendingStartups = async (req: Request, res: Response):Promise<void
     }
     // The result might contain BigInt for counts, convert them if necessary
 
-    const formattedResults:{
+    const formattedResults: {
       id: string;
       name: string;
       currentWeekArticleCount: number;
