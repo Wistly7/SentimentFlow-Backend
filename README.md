@@ -1,120 +1,204 @@
-# sentiment-analysis-backend
+# SentimentFlow — Backend
 
-![TypeScript](https://img.shields.io/badge/-TypeScript-blue?logo=typescript&logoColor=white) ![License](https://img.shields.io/badge/license-ISC-green)
+The secure API layer for [SentimentFlow](https://github.com/Wistly7/SentimentFlow-Frontend) — a startup sentiment analysis platform. Built with **Express.js**, **TypeScript**, and **Prisma**.
 
-## 📝 Description
+> **Frontend Repo →** [Wistly7/SentimentFlow-Frontend](https://github.com/Wistly7/SentimentFlow-Frontend)
 
-Dive into the emotional landscape of news articles with sentiment-analysis-backend, a robust API built with Express.js and TypeScript. This backend service analyzes news content, providing valuable insights into the overall sentiment expressed. Built for web integration, it allows developers to easily incorporate sentiment analysis capabilities into their applications, empowering users to understand the emotional tone behind the headlines.
+---
 
-## ✨ Features
+## ✨ Key Features
 
-- 🕸️ Web
+| Feature | Description |
+| :--- | :--- |
+| **JWT Authentication** | Secure signup/login with hashed passwords (bcryptjs) and JWT tokens |
+| **Role-Based Access Control** | Middleware enforces `User` vs `Admin` permissions on protected routes |
+| **Dashboard Statistics** | Complex aggregated queries — weekly article counts, sentiment trends, Share of Voice, and more |
+| **Company Analysis** | Per-company metrics including sentiment moving averages and competitor comparisons |
+| **Advanced Search & Pagination** | Server-side pagination via Prisma `skip`/`take` with full-text search support |
+| **Structured Logging** | Winston with daily file rotation for production-grade observability |
+| **Input Validation** | Request schemas validated with Zod middleware |
 
+---
 
 ## 🛠️ Tech Stack
 
-- 🚀 Express.js
-- 📜 TypeScript
+| Layer | Technologies |
+| :--- | :--- |
+| **Runtime** | Node.js, Express.js 5, TypeScript |
+| **ORM** | Prisma (with Prisma Accelerate support) |
+| **Database** | PostgreSQL |
+| **Auth** | JWT (`jsonwebtoken`), bcryptjs |
+| **Validation** | Zod |
+| **Logging** | Winston, Winston Daily Rotate File, Morgan |
+| **Deployment** | Vercel (serverless) |
 
+---
 
-## 📦 Key Dependencies
+## 🗄️ Database Schema
 
 ```
-@prisma/client: ^6.18.0
-@prisma/extension-accelerate: ^2.0.2
-bcryptjs: ^3.0.2
-dotenv: ^17.2.2
-express: ^5.1.0
-jsonwebtoken: ^9.0.2
-morgan: ^1.10.1
-nodemon: ^3.1.10
-winston: ^3.17.0
-winston-daily-rotate-file: ^5.0.0
-winston-transport: ^4.9.0
-zod: ^4.1.9
+┌──────────┐       ┌────────────┐       ┌───────────────────┐
+│  Sector  │──1:N──│  Startups  │──M:N──│     Articles      │
+│          │       │            │       │                   │
+│  id      │       │  id        │       │  id               │
+│  name    │       │  name      │       │  title            │
+└──────────┘       │  sectorId  │       │  content          │
+                   │  imageUrl  │       │  publishedAt      │
+                   └────────────┘       │  url              │
+                         │              └───────────────────┘
+                         │                       │
+                         └──────┐   ┌────────────┘
+                                ▼   ▼
+                       ┌─────────────────────┐
+                       │ ArticlesSentiment    │
+                       │  (Junction Table)    │
+                       │                     │
+                       │  articleId           │
+                       │  startupId           │
+                       │  sentiment           │
+                       │  positiveScore       │
+                       │  negativeScore       │
+                       │  neutralScore        │
+                       └─────────────────────┘
+
+┌──────────┐
+│   User   │
+│          │
+│  id      │
+│  name    │
+│  email   │
+│  roleId  │
+└──────────┘
 ```
 
-## 🚀 Run Commands
+---
 
-- **db:generate**: `npm run db:generate`
-- **build**: `npm run build`
-- **start**: `npm run start`
-- **dev**: `npm run dev`
-- **postinstall**: `npm run postinstall`
+## 🏗️ System Architecture
 
+This backend is the **Secure Guardian** in a 3-tier architecture:
+
+```
+Browser  ──▶  Next.js (BFF Proxy)  ──▶  Express.js API  ──▶  PostgreSQL
+                                         (this repo)
+                                              ▲
+                                              │
+                                    Python ETL Service
+                                   (writes sentiment data)
+```
+
+- The **Next.js frontend** proxies all user requests through its server-side API routes, attaching a secret API key.
+- This backend is the **only service** that talks to the database.
+- The **Python ETL service** runs on a schedule to fetch news, perform sentiment analysis, and write results to the database.
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js ≥ 18
+- PostgreSQL database
+
+### Installation
+
+```bash
+git clone https://github.com/Wistly7/SentimentFlow-Backend.git
+cd SentimentFlow-Backend
+npm install
+```
+
+### Environment Variables
+
+Create a `.env` file in the project root:
+
+```env
+DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/sentiment_db"
+PORT=8000
+SECRET_KEY="your-jwt-secret-key"
+NODE_ENV="development"
+```
+
+### Database Setup
+
+```bash
+# Generate the Prisma client
+npx prisma generate
+
+# Run migrations
+npx prisma migrate dev --name "init"
+```
+
+### Run
+
+```bash
+npm run dev
+```
+
+The API will be live at **http://localhost:8000**.
+
+---
 
 ## 📁 Project Structure
 
 ```
-.
-├── package.json
-├── prisma
-│   ├── migrations
-│   │   ├── 20250920060631_intial_commit
-│   │   │   └── migration.sql
-│   │   ├── 20251021164417_sentiment_table_seperated
-│   │   │   └── migration.sql
-│   │   ├── 20251024034500_sentiment_table_updated
-│   │   │   └── migration.sql
-│   │   ├── 20251024081306_add_photo
-│   │   │   └── migration.sql
-│   │   ├── 20251028204509_sectors
-│   │   │   └── migration.sql
-│   │   ├── 20251030061209_score
-│   │   │   └── migration.sql
-│   │   └── migration_lock.toml
-│   ├── schema.prisma
-│   └── sql
-│       └── getSearchOutput.sql
-├── src
-│   ├── config
-│   │   └── prisma.ts
-│   ├── controllers
+├── prisma/
+│   ├── schema.prisma        # Database schema
+│   ├── migrations/          # Migration history
+│   └── sql/                 # Raw SQL queries
+├── src/
+│   ├── index.ts             # App entry point
+│   ├── config/
+│   │   └── prisma.ts        # Prisma client setup
+│   ├── controllers/
 │   │   ├── authController.ts
 │   │   ├── companyAnalysisController.ts
 │   │   ├── dashboardStatsController.ts
 │   │   ├── searchController.ts
 │   │   └── uploader.ts
-│   ├── index.ts
-│   ├── lib
-│   │   ├── constants.ts
-│   │   └── logger.ts
-│   ├── middlewares
-│   │   ├── authMiddleware.ts
-│   │   ├── httpLogger.ts
-│   │   └── zodMiddleware.ts
-│   ├── routes
+│   ├── middlewares/
+│   │   ├── authMiddleware.ts # JWT verification & RBAC
+│   │   ├── httpLogger.ts     # Morgan + Winston integration
+│   │   └── zodMiddleware.ts  # Zod schema validation
+│   ├── routes/
 │   │   ├── authRoute.ts
 │   │   ├── companyAnalysis.ts
 │   │   ├── dashboardRoutes.ts
 │   │   ├── searchRoutes.ts
 │   │   └── uploader.ts
-│   └── types
+│   ├── lib/
+│   │   ├── constants.ts
+│   │   └── logger.ts        # Winston logger config
+│   └── types/
 │       ├── all.ts
-│       ├── express
-│       │   └── express.d.ts
-│       └── zod
-│           └── types.ts
+│       ├── express/          # Express type extensions
+│       └── zod/              # Zod schema types
+├── vercel.json               # Vercel deployment config
 ├── tsconfig.json
-└── vercel.json
+└── package.json
 ```
 
-## 👥 Contributing
+---
 
-Contributions are welcome! Here's how you can help:
+## 📜 Available Scripts
 
-1. **Fork** the repository
-2. **Clone** your fork: `git clone https://github.com/Bhoumik09/sentiment-analysis-backend.git`
-3. **Create** a new branch: `git checkout -b feature/your-feature`
-4. **Commit** your changes: `git commit -am 'Add some feature'`
-5. **Push** to your branch: `git push origin feature/your-feature`
-6. **Open** a pull request
+| Command | Description |
+| :--- | :--- |
+| `npm run dev` | Start dev server with hot-reload (via tsx watch) |
+| `npm run build` | Compile TypeScript to JavaScript |
+| `npm run start` | Start the production server |
+| `npm run db:generate` | Regenerate the Prisma client |
 
-Please ensure your code follows the project's style guidelines and includes tests where applicable.
+---
+
+## 🔗 Related Repositories
+
+| Repository | Description |
+| :--- | :--- |
+| [SentimentFlow-Frontend](https://github.com/Wistly7/SentimentFlow-Frontend) | Next.js dashboard — UI, BFF proxy, and client-side data layer |
+| [SentimentFlow-V2](https://github.com/SoumilMalik24/SentimentFlow-V2) | Python ETL service — news fetching, sentiment analysis, and data loading |
+
+---
 
 ## 📜 License
 
 This project is licensed under the ISC License.
-
----
-*This README was generated with ❤️ by ReadmeBuddy*
